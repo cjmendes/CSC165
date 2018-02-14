@@ -21,6 +21,7 @@ public class MyGame extends VariableFrameRateGame {
 	float elapsTime = 0.0f;
 	String elapsTimeStr, counterStr, dispStr;
 	int elapsTimeSec, counter = 0;
+	boolean onDolphin = false;
 
     public MyGame() {
         super();
@@ -103,20 +104,57 @@ public class MyGame extends VariableFrameRateGame {
 
     @Override
     public void keyPressed(KeyEvent e) {
-        Entity dolphin = getEngine().getSceneManager().getEntity("myDolphin");
-        switch (e.getKeyCode()) {
-            case KeyEvent.VK_L:
-                dolphin.setPrimitive(Primitive.LINES);
-                break;
-            case KeyEvent.VK_T:
-                dolphin.setPrimitive(Primitive.TRIANGLES);
-                break;
-            case KeyEvent.VK_P:
-                dolphin.setPrimitive(Primitive.POINTS);
-                break;
-			case KeyEvent.VK_C:
-				counter++;
-				break;
+    	Entity dolphin = getEngine().getSceneManager().getEntity("myDolphin");
+		SceneNode dolphinN = getEngine().getSceneManager().getSceneNode("myDolphinNode");
+		SceneNode playerN = getEngine().getSceneManager().getSceneNode("myPlayerNode");
+		Camera c = getEngine().getSceneManager().getCamera("MainCamera");
+		switch (e.getKeyCode()) { 	
+			case KeyEvent.VK_W:
+				if(onDolphin) {
+					dolphinN.moveForward(0.1f);
+				}
+				else {
+					c.setFd((Vector3f)Vector3f.createFrom(0.0f, 0.0f, 1.0f));
+				}
+			break;
+			case KeyEvent.VK_S:
+				if(onDolphin) {
+					dolphinN.moveBackward(0.1f);
+				}
+				else {
+					c.setFd((Vector3f)Vector3f.createFrom(0.0f, 0.0f, -1.0f));
+				}
+			break;
+			case KeyEvent.VK_A:
+				if(onDolphin) {
+					dolphinN.moveLeft(0.1f);
+				}
+				else {
+					c.setRt((Vector3f)Vector3f.createFrom(-1.0f, 0.0f, 0.0f));
+				}
+			break;
+			case KeyEvent.VK_D:
+				if(onDolphin) {
+					dolphinN.moveRight(0.1f);
+				}
+				else {
+					c.setRt((Vector3f)Vector3f.createFrom(1.0f, 0.0f, 0.0f));
+				}
+			break;
+			case KeyEvent.VK_SPACE:	//on press space-bar camera will move onto/off dolphin
+				if(onDolphin) {	//player is currently viewing camera from on top of dolphin
+					playerN.attachObject(c);
+					playerN.moveUp(0.5f);
+					playerN.moveBackward(5.0f);
+					c.setMode('r');
+				}
+				else {			//player is currently viewing from off of the dolphin	
+					dolphinN.attachObject(c);
+					dolphinN.moveBackward(3.0f);
+					c.setMode('c');
+				}
+				onDolphin = !onDolphin;
+			break;
         }
         super.keyPressed(e);
     }
