@@ -11,5 +11,6 @@
 	<classpathentry kind="lib" path="C:/Program Files (x86)/javagaming/rage165/ray.jar"/>
 	<classpathentry kind="lib" path="C:/Program Files (x86)/javagaming/vecmath/vecmath.jar"/>
 	<classpathentry kind="lib" path="C:/Program Files (x86)/javagaming/jogl/jogamp-all-platforms/jar/jogl-all.jar"/>
+	<classpathentry kind="lib" path="C:/Program Files (x86)/javagaming/jogl/jogamp-all-platforms/jar/gluegen-rt.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

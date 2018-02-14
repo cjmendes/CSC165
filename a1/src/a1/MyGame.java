@@ -85,9 +85,6 @@ public class MyGame extends VariableFrameRateGame {
 		SceneNode plightNode = sm.getRootSceneNode().createChildSceneNode("plightNode");
         plightNode.attachObject(plight);
 
-        RotationController rc = new RotationController(Vector3f.createUnitVectorY(), .02f);
-        rc.addNode(dolphinN);
-        sm.addController(rc);
     }
 
     @Override
@@ -104,7 +101,7 @@ public class MyGame extends VariableFrameRateGame {
 
     @Override
     public void keyPressed(KeyEvent e) {
-    	Entity dolphin = getEngine().getSceneManager().getEntity("myDolphin");
+    	//Entity dolphin = getEngine().getSceneManager().getEntity("myDolphin");
 		SceneNode dolphinN = getEngine().getSceneManager().getSceneNode("myDolphinNode");
 		SceneNode playerN = getEngine().getSceneManager().getSceneNode("myPlayerNode");
 		Camera c = getEngine().getSceneManager().getCamera("MainCamera");
@@ -116,7 +113,7 @@ public class MyGame extends VariableFrameRateGame {
 				else {
 					c.setFd((Vector3f)Vector3f.createFrom(0.0f, 0.0f, 1.0f));
 				}
-			break;
+				break;
 			case KeyEvent.VK_S:
 				if(onDolphin) {
 					dolphinN.moveBackward(0.1f);
@@ -124,7 +121,7 @@ public class MyGame extends VariableFrameRateGame {
 				else {
 					c.setFd((Vector3f)Vector3f.createFrom(0.0f, 0.0f, -1.0f));
 				}
-			break;
+				break;
 			case KeyEvent.VK_A:
 				if(onDolphin) {
 					dolphinN.moveLeft(0.1f);
@@ -132,7 +129,7 @@ public class MyGame extends VariableFrameRateGame {
 				else {
 					c.setRt((Vector3f)Vector3f.createFrom(-1.0f, 0.0f, 0.0f));
 				}
-			break;
+				break;
 			case KeyEvent.VK_D:
 				if(onDolphin) {
 					dolphinN.moveRight(0.1f);
@@ -140,7 +137,7 @@ public class MyGame extends VariableFrameRateGame {
 				else {
 					c.setRt((Vector3f)Vector3f.createFrom(1.0f, 0.0f, 0.0f));
 				}
-			break;
+				break;
 			case KeyEvent.VK_SPACE:	//on press space-bar camera will move onto/off dolphin
 				if(onDolphin) {	//player is currently viewing camera from on top of dolphin
 					playerN.attachObject(c);
@@ -154,7 +151,7 @@ public class MyGame extends VariableFrameRateGame {
 					c.setMode('c');
 				}
 				onDolphin = !onDolphin;
-			break;
+				break;
         }
         super.keyPressed(e);
     }
