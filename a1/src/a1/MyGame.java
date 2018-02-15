@@ -149,7 +149,7 @@ public class MyGame extends VariableFrameRateGame {
     protected void setupInputs() {
     	im = new GenericInputManager();
     	String kbName = im.getKeyboardName();
-    	String gpName = im.getFirstGamepadName();
+    	//String gpName = im.getFirstGamepadName();
     	
     	// Build some action objects for doing things in response to user input
     	quitGameAction = new QuitGameAction(this);
