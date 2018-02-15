@@ -6,9 +6,16 @@ import java.io.*;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 
+import myGameEngine.MoveBackwardAction;
+import myGameEngine.MoveForwardAction;
+import myGameEngine.MoveLeftAction;
 import myGameEngine.MoveRightAction;
 import myGameEngine.QuitGameAction;
 import myGameEngine.RideDolphinAction;
+import myGameEngine.RotateCameraDown;
+import myGameEngine.RotateCameraLeft;
+import myGameEngine.RotateCameraRight;
+import myGameEngine.RotateCameraUp;
 import ray.input.GenericInputManager;
 import ray.input.InputManager;
 import ray.input.action.Action;
@@ -36,11 +43,19 @@ public class MyGame extends VariableFrameRateGame {
 	String elapsTimeStr, counterStr, dispStr;
 	int elapsTimeSec, counter = 0;
 	
+	//Entity dolphinE;
+	private SceneNode activeNode;
+	
 	//***** Input Devices and Actions *****
 	private InputManager im;
-	private Action quitGameAction, moveRightAction, rideDolphinAction;
+	private Action quitGameAction, moveForwardAction,
+			moveBackwardAction, moveRightAction, 
+			moveLeftAction, rotateCameraDown,
+			rotateCameraUp, rotateCameraRight,
+			rotateCameraLeft, rideDolphinAction;
 	//***** End Input Devices and Actions *****
 	
+	private SceneNode onDolphinNode;
 	private boolean onDolphin = false;
 
     public MyGame() {
@@ -85,7 +100,7 @@ public class MyGame extends VariableFrameRateGame {
 		
 		camera.setPo((Vector3f)Vector3f.createFrom(0.0f, 0.0f, 0.0f));
 
-		camera.setMode('c');
+		camera.setMode('r');
         SceneNode cameraNode = rootNode.createChildSceneNode(camera.getName() + "Node");
         cameraNode.attachObject(camera);
     }
@@ -94,14 +109,15 @@ public class MyGame extends VariableFrameRateGame {
    
     @Override
     protected void setupScene(Engine eng, SceneManager sm) throws IOException {
-       setupInputs();
+    	// Setup the input actions
+    	setupInputs();
     	
-    	Entity dolphinE = sm.createEntity("myDolphin", "dolphinHighPoly.obj");
-        dolphinE.setPrimitive(Primitive.TRIANGLES);
-
-        SceneNode dolphinN = sm.getRootSceneNode().createChildSceneNode(dolphinE.getName() + "Node");
-        dolphinN.moveBackward(2.0f);
-        dolphinN.attachObject(dolphinE);
+        // Create Dolphin
+        makeDolphin(eng, sm);
+   
+        makeCoin(eng, sm);
+        
+        activeNode = this.getEngine().getSceneManager().getSceneNode("MainCameraNode");
         
         // Create Pyramid
         ManualObject pyr = makePyramid(eng, sm);
@@ -110,20 +126,21 @@ public class MyGame extends VariableFrameRateGame {
         pyrN.moveForward(2.0f);
         pyrN.attachObject(pyr);
         
-        RotationController rc = new RotationController(Vector3f.createUnitVectorY(), 0.02f);
-        rc.addNode(pyrN);
-        sm.addController(rc);
+       RotationController rc = new RotationController(Vector3f.createUnitVectorY(), 0.02f);
+       rc.addNode(pyrN);
+       sm.addController(rc);
 
-        sm.getAmbientLight().setIntensity(new Color(.1f, .1f, .1f));
+       sm.getAmbientLight().setIntensity(new Color(.1f, .1f, .1f));
 		
-		Light plight = sm.createLight("testLamp1", Light.Type.POINT);
-		plight.setAmbient(new Color(.3f, .3f, .3f));
-        plight.setDiffuse(new Color(.7f, .7f, .7f));
-		plight.setSpecular(new Color(1.0f, 1.0f, 1.0f));
-        plight.setRange(5f);
+       //***** Light Node *****
+       Light plight = sm.createLight("testLamp1", Light.Type.POINT);
+       plight.setAmbient(new Color(.3f, .3f, .3f));
+       plight.setDiffuse(new Color(.7f, .7f, .7f));
+       plight.setSpecular(new Color(1.0f, 1.0f, 1.0f));
+       plight.setRange(5f);
 		
-		SceneNode plightNode = sm.getRootSceneNode().createChildSceneNode("plightNode");
-        plightNode.attachObject(plight);
+       SceneNode plightNode = sm.getRootSceneNode().createChildSceneNode("plightNode");
+       plightNode.attachObject(plight);
 
     }
 
@@ -154,7 +171,14 @@ public class MyGame extends VariableFrameRateGame {
     	// Build some action objects for doing things in response to user input
     	quitGameAction = new QuitGameAction(this);
     	rideDolphinAction = new RideDolphinAction(this, onDolphin);
-    	moveRightAction = new MoveRightAction(this.getEngine().getSceneManager().getCamera("MainCamera"));
+    	moveForwardAction = new MoveForwardAction(this);
+    	moveBackwardAction = new MoveBackwardAction(this);
+    	moveLeftAction = new MoveLeftAction(this);
+    	moveRightAction = new MoveRightAction(this);
+    	rotateCameraUp = new RotateCameraUp(this);
+    	rotateCameraDown = new RotateCameraDown(this);
+    	rotateCameraRight = new RotateCameraRight(this);
+    	rotateCameraLeft = new RotateCameraLeft(this);
     	
     	// Attach the action objects to keyboard and gamepad components
     	// Keyboard Action
@@ -164,9 +188,30 @@ public class MyGame extends VariableFrameRateGame {
     	//im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._9, 
     	//		quitGameAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
     	
+    	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.W, 
+			    moveForwardAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+    	
+    	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.A, 
+    			moveLeftAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+    	
+    	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.S, 
+    			moveBackwardAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+    	
     	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.D, 
     			moveRightAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
     	
+    	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.UP, 
+    			rotateCameraUp, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+    	
+    	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.DOWN, 
+    			rotateCameraDown, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+    	
+    	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.RIGHT, 
+    			rotateCameraRight, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+    	
+    	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.LEFT, 
+    			rotateCameraLeft, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+	
     	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.SPACE, 
     			rideDolphinAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
     	
@@ -235,8 +280,50 @@ public class MyGame extends VariableFrameRateGame {
         super.keyPressed(e);
     }*/
     
+    public SceneNode getActiveNode() {
+    	return activeNode;
+    }
+    
+    public void setActiveNode(SceneNode sn) {
+    	activeNode = sn;
+    }
+    
+//******************************************************************************************************************
+//********************** Create Objects in Game Section ************************************************************
 //******************************************************************************************************************
     
+    //***** Make Dolphins *****
+    private void makeDolphin(Engine eng, SceneManager sm) throws IOException {
+    	Entity dolphinE = sm.createEntity("myDolphin", "dolphinHighPoly.obj");
+    	dolphinE.setPrimitive(Primitive.TRIANGLES);
+
+    	SceneNode dolphinN = sm.getRootSceneNode().createChildSceneNode(dolphinE.getName() + "Node");
+    	//dolphinN.moveBackward(2.0f);
+    	dolphinN.attachObject(dolphinE);
+    	
+    	onDolphinNode = sm.getSceneNode("myDolphinNode").createChildSceneNode("OnDolphinNode");
+    	onDolphinNode.moveUp(0.3f);
+    }
+    
+    private void makeCoin(Engine eng, SceneManager sm) throws IOException {
+    	Entity coinE = sm.createEntity("coin",	"coin.obj");
+    	coinE.setPrimitive(Primitive.TRIANGLES);
+    	
+    	
+    	SceneNode coinN = sm.getRootSceneNode().createChildSceneNode(coinE.getName() + "Node");
+    	coinN.moveForward(5.0f);
+    	coinN.rotate(Degreef.createFrom(90f), Vector3f.createUnitVectorX());
+    	coinN.rotate(Degreef.createFrom(180f), Vector3f.createUnitVectorZ());
+    	coinN.attachObject(coinE);
+    	coinN.scale(0.25f, 0.25f, 0.25f);
+    	
+    	Texture tex = eng.getTextureManager().getAssetByPath("coin-texture.jpg");
+		TextureState texState = (TextureState)sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+		texState.setTexture(tex);
+		coinE.setRenderState(texState);
+    }
+    
+    //***** Make Pyramids *****
     protected ManualObject makePyramid(Engine eng, SceneManager sm)	throws IOException { 
 		ManualObject pyr = sm.createManualObject("Pyramid");
 		ManualObjectSection pyrSec = pyr.createManualSection("PyramidSection");
