@@ -3,16 +3,30 @@ package a1;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 
+import myGameEngine.MoveRightAction;
+import myGameEngine.QuitGameAction;
+import myGameEngine.RideDolphinAction;
+import ray.input.GenericInputManager;
+import ray.input.InputManager;
+import ray.input.action.Action;
 import ray.rage.*;
+import ray.rage.asset.texture.*;
 import ray.rage.game.*;
 import ray.rage.rendersystem.*;
 import ray.rage.rendersystem.Renderable.*;
 import ray.rage.scene.*;
-import ray.rage.scene.Camera.Frustum.*;
+import ray.rage.scene.Camera.Frustum.Projection;
 import ray.rage.scene.controllers.*;
+import ray.rage.util.BufferUtil;
+import ray.rage.util.Configuration;
 import ray.rml.*;
 import ray.rage.rendersystem.gl4.GL4RenderSystem;
+import ray.rage.rendersystem.states.TextureState;
+import ray.rage.rendersystem.states.*;
+import ray.rage.rendersystem.shader.*;
 
 public class MyGame extends VariableFrameRateGame {
 
@@ -21,7 +35,13 @@ public class MyGame extends VariableFrameRateGame {
 	float elapsTime = 0.0f;
 	String elapsTimeStr, counterStr, dispStr;
 	int elapsTimeSec, counter = 0;
-	boolean onDolphin = false;
+	
+	//***** Input Devices and Actions *****
+	private InputManager im;
+	private Action quitGameAction, moveRightAction, rideDolphinAction;
+	//***** End Input Devices and Actions *****
+	
+	private boolean onDolphin = false;
 
     public MyGame() {
         super();
@@ -44,10 +64,14 @@ public class MyGame extends VariableFrameRateGame {
         }
     }
 	
+//******************************************************************************************************************
+    
 	@Override
 	protected void setupWindow(RenderSystem rs, GraphicsEnvironment ge) {
 		rs.createRenderWindow(new DisplayMode(1000, 700, 24, 60), false);
 	}
+
+//******************************************************************************************************************
 
     @Override
     protected void setupCameras(SceneManager sm, RenderWindow rw) {
@@ -61,18 +85,34 @@ public class MyGame extends VariableFrameRateGame {
 		
 		camera.setPo((Vector3f)Vector3f.createFrom(0.0f, 0.0f, 0.0f));
 
+		camera.setMode('c');
         SceneNode cameraNode = rootNode.createChildSceneNode(camera.getName() + "Node");
         cameraNode.attachObject(camera);
     }
-	
+
+//******************************************************************************************************************
+   
     @Override
     protected void setupScene(Engine eng, SceneManager sm) throws IOException {
-        Entity dolphinE = sm.createEntity("myDolphin", "dolphinHighPoly.obj");
+       setupInputs();
+    	
+    	Entity dolphinE = sm.createEntity("myDolphin", "dolphinHighPoly.obj");
         dolphinE.setPrimitive(Primitive.TRIANGLES);
 
         SceneNode dolphinN = sm.getRootSceneNode().createChildSceneNode(dolphinE.getName() + "Node");
         dolphinN.moveBackward(2.0f);
         dolphinN.attachObject(dolphinE);
+        
+        // Create Pyramid
+        ManualObject pyr = makePyramid(eng, sm);
+        SceneNode pyrN = sm.getRootSceneNode().createChildSceneNode("PyrNode");
+        pyrN.scale(0.75f, 0.75f, 0.75f);
+        pyrN.moveForward(2.0f);
+        pyrN.attachObject(pyr);
+        
+        RotationController rc = new RotationController(Vector3f.createUnitVectorY(), 0.02f);
+        rc.addNode(pyrN);
+        sm.addController(rc);
 
         sm.getAmbientLight().setIntensity(new Color(.1f, .1f, .1f));
 		
@@ -87,6 +127,8 @@ public class MyGame extends VariableFrameRateGame {
 
     }
 
+//******************************************************************************************************************
+    
     @Override
     protected void update(Engine engine) {
 		// build and set HUD
@@ -97,15 +139,48 @@ public class MyGame extends VariableFrameRateGame {
 		counterStr = Integer.toString(counter);
 		dispStr = "Time = " + elapsTimeStr + "   Keyboard hits = " + counterStr;
 		rs.setHUD(dispStr, 15, 15);
+		
+		// Tell the input manager to process the inputs
+		im.update(elapsTime);
 	}
 
-    @Override
+//******************************************************************************************************************
+   
+    protected void setupInputs() {
+    	im = new GenericInputManager();
+    	String kbName = im.getKeyboardName();
+    	String gpName = im.getFirstGamepadName();
+    	
+    	// Build some action objects for doing things in response to user input
+    	quitGameAction = new QuitGameAction(this);
+    	rideDolphinAction = new RideDolphinAction(this, onDolphin);
+    	moveRightAction = new MoveRightAction(this.getEngine().getSceneManager().getCamera("MainCamera"));
+    	
+    	// Attach the action objects to keyboard and gamepad components
+    	// Keyboard Action
+    	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.ESCAPE, 
+    			quitGameAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
+    	// Gamepad Action
+    	//im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._9, 
+    	//		quitGameAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
+    	
+    	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.D, 
+    			moveRightAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+    	
+    	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.SPACE, 
+    			rideDolphinAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
+    	
+    }
+    
+   /* @Override
     public void keyPressed(KeyEvent e) {
     	//Entity dolphin = getEngine().getSceneManager().getEntity("myDolphin");
 		SceneNode dolphinN = getEngine().getSceneManager().getSceneNode("myDolphinNode");
 		SceneNode playerN = getEngine().getSceneManager().getSceneNode("myPlayerNode");
 		Camera c = getEngine().getSceneManager().getCamera("MainCamera");
-		switch (e.getKeyCode()) { 	
+		
+		switch (e.getKeyCode()) { 
+		
 			case KeyEvent.VK_W:
 				if(onDolphin) {
 					dolphinN.moveForward(0.1f);
@@ -114,6 +189,7 @@ public class MyGame extends VariableFrameRateGame {
 					c.setFd((Vector3f)Vector3f.createFrom(0.0f, 0.0f, 1.0f));
 				}
 				break;
+				
 			case KeyEvent.VK_S:
 				if(onDolphin) {
 					dolphinN.moveBackward(0.1f);
@@ -122,6 +198,7 @@ public class MyGame extends VariableFrameRateGame {
 					c.setFd((Vector3f)Vector3f.createFrom(0.0f, 0.0f, -1.0f));
 				}
 				break;
+				
 			case KeyEvent.VK_A:
 				if(onDolphin) {
 					dolphinN.moveLeft(0.1f);
@@ -130,6 +207,7 @@ public class MyGame extends VariableFrameRateGame {
 					c.setRt((Vector3f)Vector3f.createFrom(-1.0f, 0.0f, 0.0f));
 				}
 				break;
+				
 			case KeyEvent.VK_D:
 				if(onDolphin) {
 					dolphinN.moveRight(0.1f);
@@ -138,6 +216,7 @@ public class MyGame extends VariableFrameRateGame {
 					c.setRt((Vector3f)Vector3f.createFrom(1.0f, 0.0f, 0.0f));
 				}
 				break;
+				
 			case KeyEvent.VK_SPACE:	//on press space-bar camera will move onto/off dolphin
 				if(onDolphin) {	//player is currently viewing camera from on top of dolphin
 					playerN.attachObject(c);
@@ -154,5 +233,58 @@ public class MyGame extends VariableFrameRateGame {
 				break;
         }
         super.keyPressed(e);
-    }
+    }*/
+    
+//******************************************************************************************************************
+    
+    protected ManualObject makePyramid(Engine eng, SceneManager sm)	throws IOException { 
+		ManualObject pyr = sm.createManualObject("Pyramid");
+		ManualObjectSection pyrSec = pyr.createManualSection("PyramidSection");
+		pyr.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
+		float[] vertices = new float[] { 
+			-1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, //front
+			1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, //right
+			1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, //back
+			-1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, //left
+			-1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, //LF
+			1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f //RR
+		};
+		
+		float[] texcoords = new float[] { 
+			0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
+			0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
+			0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
+			0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
+			0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+			1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f
+		};
+		
+		float[] normals = new float[] { 
+			0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+			1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+			0.0f, 1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 1.0f, -1.0f,
+			-1.0f, 1.0f, 0.0f, -1.0f, 1.0f, 0.0f, -1.0f, 1.0f, 0.0f,
+			0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f,
+			0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f
+		};
+		
+		int[] indices = new int[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17 };
+		
+		FloatBuffer vertBuf = BufferUtil.directFloatBuffer(vertices);
+		FloatBuffer texBuf = BufferUtil.directFloatBuffer(texcoords);
+		FloatBuffer normBuf = BufferUtil.directFloatBuffer(normals);
+		IntBuffer indexBuf = BufferUtil.directIntBuffer(indices);
+		pyrSec.setVertexBuffer(vertBuf);
+		pyrSec.setTextureCoordsBuffer(texBuf);
+		pyrSec.setNormalsBuffer(normBuf);
+		pyrSec.setIndexBuffer(indexBuf);
+		Texture tex = eng.getTextureManager().getAssetByPath("chain-fence.jpeg");
+		TextureState texState = (TextureState)sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+		texState.setTexture(tex);
+		FrontFaceState faceState = (FrontFaceState) sm.getRenderSystem().createRenderState(RenderState.Type.FRONT_FACE);
+		pyr.setDataSource(DataSource.INDEX_BUFFER);
+		pyr.setRenderState(texState);
+		pyr.setRenderState(faceState);
+		return pyr;
+}
 }
