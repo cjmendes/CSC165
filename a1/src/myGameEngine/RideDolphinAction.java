@@ -17,6 +17,7 @@ public class RideDolphinAction extends AbstractInputAction {
 	public void performAction(float time, Event event) { 
 		if(onDolphin) {
 			game.getEngine().getSceneManager().getSceneNode("OnDolphinNode").detachAllChildren();
+			game.getEngine().getSceneManager().getSceneNode("MainCameraNode").setLocalRotation(game.getEngine().getSceneManager().getSceneNode("myDolphinNode").getLocalRotation());
 			game.getEngine().getSceneManager().getSceneNode("MainCameraNode").setLocalPosition(game.getEngine().getSceneManager().getSceneNode("myDolphinNode").getLocalPosition().add(Vector3f.createFrom(-0.3f, 0.2f, 0.0f)));
 			game.setActiveNode(game.getEngine().getSceneManager().getSceneNode("MainCameraNode"));
 			onDolphin = false;
@@ -24,8 +25,7 @@ public class RideDolphinAction extends AbstractInputAction {
 		else {
 			game.getEngine().getSceneManager().getSceneNode("OnDolphinNode").attachChild(game.getEngine().getSceneManager().getSceneNode("MainCameraNode"));
 			game.getEngine().getSceneManager().getSceneNode("MainCameraNode").setLocalPosition(0.0f, 0.0f, 0.0f);
-			//game.getEngine().getSceneManager().getCamera("MainCamera").setMode('r');
-			//System.out.println("Riding");
+			game.getEngine().getSceneManager().getSceneNode("MainCameraNode").setLocalRotation(game.getEngine().getSceneManager().getSceneNode("OnDolphinNode").getLocalRotation());
 			game.setActiveNode(game.getEngine().getSceneManager().getSceneNode("myDolphinNode"));
 			onDolphin = true;
 		}

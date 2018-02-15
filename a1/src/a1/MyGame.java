@@ -2,6 +2,7 @@ package a1;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.AffineTransform;
 import java.io.*;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
@@ -57,6 +58,9 @@ public class MyGame extends VariableFrameRateGame {
 	
 	private SceneNode onDolphinNode;
 	private boolean onDolphin = false;
+	
+	private int NUM_OF_COLLECTABLES = 30;
+	private int SIZE_OF_SPACE = 20;
 
     public MyGame() {
         super();
@@ -115,7 +119,7 @@ public class MyGame extends VariableFrameRateGame {
         // Create Dolphin
         makeDolphin(eng, sm);
    
-        makeCoin(eng, sm);
+        //makeSkyBox(eng, sm);
         
         activeNode = this.getEngine().getSceneManager().getSceneNode("MainCameraNode");
         
@@ -129,6 +133,13 @@ public class MyGame extends VariableFrameRateGame {
        RotationController rc = new RotationController(Vector3f.createUnitVectorY(), 0.02f);
        rc.addNode(pyrN);
        sm.addController(rc);
+       
+       RotationController rcCoin = new RotationController(Vector3f.createUnitVectorZ(), 0.4f);
+              
+       for( int i = 0; i < NUM_OF_COLLECTABLES; i++)
+    	   rcCoin.addNode(makeCoin(eng, sm, i));
+       
+       sm.addController(rcCoin);
 
        sm.getAmbientLight().setIntensity(new Color(.1f, .1f, .1f));
 		
@@ -178,7 +189,7 @@ public class MyGame extends VariableFrameRateGame {
     	rotateCameraUp = new RotateCameraUp(this);
     	rotateCameraDown = new RotateCameraDown(this);
     	rotateCameraRight = new RotateCameraRight(this);
-    	rotateCameraLeft = new RotateCameraLeft(this);
+    	rotateCameraLeft = new RotateCameraLeft(this); 
     	
     	// Attach the action objects to keyboard and gamepad components
     	// Keyboard Action
@@ -216,69 +227,7 @@ public class MyGame extends VariableFrameRateGame {
     			rideDolphinAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
     	
     }
-    
-   /* @Override
-    public void keyPressed(KeyEvent e) {
-    	//Entity dolphin = getEngine().getSceneManager().getEntity("myDolphin");
-		SceneNode dolphinN = getEngine().getSceneManager().getSceneNode("myDolphinNode");
-		SceneNode playerN = getEngine().getSceneManager().getSceneNode("myPlayerNode");
-		Camera c = getEngine().getSceneManager().getCamera("MainCamera");
-		
-		switch (e.getKeyCode()) { 
-		
-			case KeyEvent.VK_W:
-				if(onDolphin) {
-					dolphinN.moveForward(0.1f);
-				}
-				else {
-					c.setFd((Vector3f)Vector3f.createFrom(0.0f, 0.0f, 1.0f));
-				}
-				break;
-				
-			case KeyEvent.VK_S:
-				if(onDolphin) {
-					dolphinN.moveBackward(0.1f);
-				}
-				else {
-					c.setFd((Vector3f)Vector3f.createFrom(0.0f, 0.0f, -1.0f));
-				}
-				break;
-				
-			case KeyEvent.VK_A:
-				if(onDolphin) {
-					dolphinN.moveLeft(0.1f);
-				}
-				else {
-					c.setRt((Vector3f)Vector3f.createFrom(-1.0f, 0.0f, 0.0f));
-				}
-				break;
-				
-			case KeyEvent.VK_D:
-				if(onDolphin) {
-					dolphinN.moveRight(0.1f);
-				}
-				else {
-					c.setRt((Vector3f)Vector3f.createFrom(1.0f, 0.0f, 0.0f));
-				}
-				break;
-				
-			case KeyEvent.VK_SPACE:	//on press space-bar camera will move onto/off dolphin
-				if(onDolphin) {	//player is currently viewing camera from on top of dolphin
-					playerN.attachObject(c);
-					playerN.moveUp(0.5f);
-					playerN.moveBackward(5.0f);
-					c.setMode('r');
-				}
-				else {			//player is currently viewing from off of the dolphin	
-					dolphinN.attachObject(c);
-					dolphinN.moveBackward(3.0f);
-					c.setMode('c');
-				}
-				onDolphin = !onDolphin;
-				break;
-        }
-        super.keyPressed(e);
-    }*/
+ 
     
     public SceneNode getActiveNode() {
     	return activeNode;
@@ -286,6 +235,10 @@ public class MyGame extends VariableFrameRateGame {
     
     public void setActiveNode(SceneNode sn) {
     	activeNode = sn;
+    }
+    
+    public static float randInRangeFloat(int min, int max) {
+        return min + (float) (Math.random() * ((1 + max) - min));
     }
     
 //******************************************************************************************************************
@@ -298,29 +251,35 @@ public class MyGame extends VariableFrameRateGame {
     	dolphinE.setPrimitive(Primitive.TRIANGLES);
 
     	SceneNode dolphinN = sm.getRootSceneNode().createChildSceneNode(dolphinE.getName() + "Node");
-    	//dolphinN.moveBackward(2.0f);
+    	dolphinN.moveDown(0.4f);
+    	dolphinN.moveLeft(0.4f);
     	dolphinN.attachObject(dolphinE);
     	
     	onDolphinNode = sm.getSceneNode("myDolphinNode").createChildSceneNode("OnDolphinNode");
     	onDolphinNode.moveUp(0.3f);
     }
     
-    private void makeCoin(Engine eng, SceneManager sm) throws IOException {
-    	Entity coinE = sm.createEntity("coin",	"coin.obj");
+    //***** Make Coins *****
+    private SceneNode makeCoin(Engine eng, SceneManager sm, int num) throws IOException {
+    	Entity coinE = sm.createEntity("coin" + Integer.toString(num),	"coin.obj");
     	coinE.setPrimitive(Primitive.TRIANGLES);
     	
     	
     	SceneNode coinN = sm.getRootSceneNode().createChildSceneNode(coinE.getName() + "Node");
-    	coinN.moveForward(5.0f);
+    	coinN.moveForward(randInRangeFloat(-SIZE_OF_SPACE, SIZE_OF_SPACE));
+    	coinN.moveUp(randInRangeFloat(-SIZE_OF_SPACE, SIZE_OF_SPACE));
+    	coinN.moveRight(randInRangeFloat(-SIZE_OF_SPACE, SIZE_OF_SPACE));
     	coinN.rotate(Degreef.createFrom(90f), Vector3f.createUnitVectorX());
     	coinN.rotate(Degreef.createFrom(180f), Vector3f.createUnitVectorZ());
     	coinN.attachObject(coinE);
     	coinN.scale(0.25f, 0.25f, 0.25f);
     	
-    	Texture tex = eng.getTextureManager().getAssetByPath("coin-texture.jpg");
+    	return coinN;
+    	
+    	/*Texture tex = eng.getTextureManager().getAssetByPath("coin-texture.jpg");
 		TextureState texState = (TextureState)sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
 		texState.setTexture(tex);
-		coinE.setRenderState(texState);
+		coinE.setRenderState(texState);*/
     }
     
     //***** Make Pyramids *****
@@ -373,5 +332,40 @@ public class MyGame extends VariableFrameRateGame {
 		pyr.setRenderState(texState);
 		pyr.setRenderState(faceState);
 		return pyr;
-}
+    }
+    
+    /*private void makeSkyBox(Engine engine, SceneManager sm) throws IOException {
+        Configuration conf = engine.getConfiguration();
+        TextureManager textureMgr = engine.getTextureManager();
+
+        textureMgr.setBaseDirectoryPath(conf.valueOf("assets.skyboxes.path")); 
+        Texture front = textureMgr.getAssetByPath("cyclone-island_ft.png");
+        Texture back = textureMgr.getAssetByPath("cyclone-island_bk.png");
+        Texture left = textureMgr.getAssetByPath("cyclone-island_rt.png");
+        Texture right = textureMgr.getAssetByPath("cyclone-island_lf.png");
+        Texture top = textureMgr.getAssetByPath("cyclone-island_up.png");
+        Texture bottom = textureMgr.getAssetByPath("cyclone-island_dn.png");
+        textureMgr.setBaseDirectoryPath(conf.valueOf("assets.textures.path"));
+
+        // cubemap textures must be flipped up-side-down to face inward; all textures must have the same dimensions, so any image height will do
+        AffineTransform xform = new AffineTransform();
+        xform.translate(0, front.getImage().getHeight());
+        xform.scale(1d, -1d);
+
+        front.transform(xform);
+        back.transform(xform);
+        left.transform(xform);
+        right.transform(xform);
+        top.transform(xform);
+        bottom.transform(xform);
+
+        SkyBox sb = sm.createSkyBox("SkyBox");
+        sb.setTexture(front, SkyBox.Face.FRONT);
+        sb.setTexture(back, SkyBox.Face.BACK);
+        sb.setTexture(left, SkyBox.Face.LEFT);
+        sb.setTexture(right, SkyBox.Face.RIGHT);
+        sb.setTexture(top, SkyBox.Face.TOP);
+        sb.setTexture(bottom, SkyBox.Face.BOTTOM);
+        sm.setActiveSkyBox(sb);
+    }*/
 }
