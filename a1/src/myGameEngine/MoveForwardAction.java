@@ -13,6 +13,9 @@ public class MoveForwardAction extends AbstractInputAction {
 	}
 	
 	public void performAction(float time, Event event) {
-		game.getEngine().getSceneManager().getSceneNode(game.getActiveNode().getName()).moveForward(0.05f);
+		if(game.getSprint())
+			game.getEngine().getSceneManager().getSceneNode(game.getActiveNode().getName()).moveForward(0.25f);
+		else
+			game.getEngine().getSceneManager().getSceneNode(game.getActiveNode().getName()).moveForward(0.05f);
 	}
 }

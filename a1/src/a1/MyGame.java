@@ -17,6 +17,7 @@ import myGameEngine.RotateCameraDown;
 import myGameEngine.RotateCameraLeft;
 import myGameEngine.RotateCameraRight;
 import myGameEngine.RotateCameraUp;
+import myGameEngine.SprintAction;
 import ray.input.GenericInputManager;
 import ray.input.InputManager;
 import ray.input.action.Action;
@@ -53,13 +54,17 @@ public class MyGame extends VariableFrameRateGame {
 			moveBackwardAction, moveRightAction, 
 			moveLeftAction, rotateCameraDown,
 			rotateCameraUp, rotateCameraRight,
-			rotateCameraLeft, rideDolphinAction;
+			rotateCameraLeft, rideDolphinAction,
+			sprintAction;
 	//***** End Input Devices and Actions *****
 	
 	private SceneNode onDolphinNode;
 	private boolean onDolphin = false;
+	private boolean sprint = false;
+	private boolean tooFar = false;
 	
-	private int NUM_OF_COLLECTABLES = 30;
+	private int NUM_OF_COINS = 30;
+	private int NUM_OF_EXTRA_OBJECTS = 10;
 	private int SIZE_OF_SPACE = 20;
 
     public MyGame() {
@@ -123,20 +128,16 @@ public class MyGame extends VariableFrameRateGame {
         
         activeNode = this.getEngine().getSceneManager().getSceneNode("MainCameraNode");
         
-        // Create Pyramid
-        ManualObject pyr = makePyramid(eng, sm);
-        SceneNode pyrN = sm.getRootSceneNode().createChildSceneNode("PyrNode");
-        pyrN.scale(0.75f, 0.75f, 0.75f);
-        pyrN.moveForward(2.0f);
-        pyrN.attachObject(pyr);
-        
-       RotationController rc = new RotationController(Vector3f.createUnitVectorY(), 0.02f);
-       rc.addNode(pyrN);
+       RotationController rc = new RotationController(Vector3f.createUnitVectorY(), 0.01f);
+       
+       for( int i = 0; i < NUM_OF_EXTRA_OBJECTS; i++)
+    	   rc.addNode(createDiamond(eng, sm, i));
+       
        sm.addController(rc);
        
        RotationController rcCoin = new RotationController(Vector3f.createUnitVectorZ(), 0.4f);
               
-       for( int i = 0; i < NUM_OF_COLLECTABLES; i++)
+       for( int i = 0; i < NUM_OF_COINS; i++)
     	   rcCoin.addNode(makeCoin(eng, sm, i));
        
        sm.addController(rcCoin);
@@ -167,9 +168,12 @@ public class MyGame extends VariableFrameRateGame {
 		counterStr = Integer.toString(counter);
 		dispStr = "Time = " + elapsTimeStr + "   Keyboard hits = " + counterStr;
 		rs.setHUD(dispStr, 15, 15);
-		
+		//System.out.println();
+		//if(checkTooFar(engine.getSceneManager()) == -1)
+			
 		// Tell the input manager to process the inputs
 		im.update(elapsTime);
+		checkCollision(engine.getSceneManager());
 	}
 
 //******************************************************************************************************************
@@ -190,6 +194,7 @@ public class MyGame extends VariableFrameRateGame {
     	rotateCameraDown = new RotateCameraDown(this);
     	rotateCameraRight = new RotateCameraRight(this);
     	rotateCameraLeft = new RotateCameraLeft(this); 
+    	sprintAction = new SprintAction(this); 
     	
     	// Attach the action objects to keyboard and gamepad components
     	// Keyboard Action
@@ -226,6 +231,8 @@ public class MyGame extends VariableFrameRateGame {
     	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.SPACE, 
     			rideDolphinAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
     	
+    	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.LSHIFT, 
+    			sprintAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
     }
  
     
@@ -239,6 +246,32 @@ public class MyGame extends VariableFrameRateGame {
     
     public static float randInRangeFloat(int min, int max) {
         return min + (float) (Math.random() * ((1 + max) - min));
+    }
+    
+    public void changeSprint() {
+    	if(sprint)
+    		sprint = false;
+    	else
+    		sprint = true;
+    }
+    
+    public boolean getSprint() {
+    	return sprint;
+    }
+    
+    public boolean getTooFar() {
+    	return tooFar;
+    }
+    
+    public int checkTooFar(SceneManager sm) {
+    	return sm.getSceneNode("MainCameraNode").getLocalPosition().compareTo(sm.getSceneNode("myDolphinNode").getLocalPosition().add(Vector3f.createFrom(1.0f, 0.0f, 0.0f)));
+    }
+    
+    public void checkCollision(SceneManager sm) {
+    	for( int i = 0; i < NUM_OF_COINS; i++ ) {
+			if( sm.getSceneNode("coin" + Integer.toString(i) + "Node").getLocalPosition() == sm.getSceneNode("MainCameraNode").getLocalPosition())
+				counter++;
+		}
     }
     
 //******************************************************************************************************************
@@ -275,25 +308,23 @@ public class MyGame extends VariableFrameRateGame {
     	coinN.scale(0.25f, 0.25f, 0.25f);
     	
     	return coinN;
-    	
-    	/*Texture tex = eng.getTextureManager().getAssetByPath("coin-texture.jpg");
-		TextureState texState = (TextureState)sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
-		texState.setTexture(tex);
-		coinE.setRenderState(texState);*/
     }
+   
     
     //***** Make Pyramids *****
-    protected ManualObject makePyramid(Engine eng, SceneManager sm)	throws IOException { 
-		ManualObject pyr = sm.createManualObject("Pyramid");
-		ManualObjectSection pyrSec = pyr.createManualSection("PyramidSection");
+    protected ManualObject makeDiamond(Engine eng, SceneManager sm, int num)	throws IOException { 
+		ManualObject pyr = sm.createManualObject("Diamond" + Integer.toString(num));
+		ManualObjectSection pyrSec = pyr.createManualSection("DiamondSection");
 		pyr.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
-		float[] vertices = new float[] { 
-			-1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, //front
-			1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, //right
-			1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, //back
-			-1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, //left
-			-1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, //LF
-			1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f //RR
+		float[] vertices = new float[] {
+				-0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.0f, 0.5f, 0.0f, //front
+				0.5f, -0.5f, 0.5f, 0.5f, -0.5f, -0.5f, 0.0f, 0.5f, 0.0f, //right
+				0.5f, -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, 0.0f, 0.5f, 0.0f, //back
+				-0.5f, -0.5f, -0.5f, -0.5f, -0.5f, 0.5f, 0.0f, 0.5f, 0.0f, //left
+				0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f,0.0f, -1.5f, 0.0f, //front t2
+				0.5f, -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.0f, -1.5f, 0.0f, //right t2
+				-0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.0f, -1.5f, 0.0f, //back t2
+				-0.5f, -0.5f, 0.5f, -0.5f, -0.5f, -0.5f, 0.0f, -1.5f, 0.0f //left t2
 		};
 		
 		float[] texcoords = new float[] { 
@@ -301,8 +332,10 @@ public class MyGame extends VariableFrameRateGame {
 			0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
 			0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
 			0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
-			0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
-			1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f
+			0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
+			0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
+			0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
+			0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f
 		};
 		
 		float[] normals = new float[] { 
@@ -314,7 +347,7 @@ public class MyGame extends VariableFrameRateGame {
 			0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f
 		};
 		
-		int[] indices = new int[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17 };
+		int[] indices = new int[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24 };
 		
 		FloatBuffer vertBuf = BufferUtil.directFloatBuffer(vertices);
 		FloatBuffer texBuf = BufferUtil.directFloatBuffer(texcoords);
@@ -324,14 +357,27 @@ public class MyGame extends VariableFrameRateGame {
 		pyrSec.setTextureCoordsBuffer(texBuf);
 		pyrSec.setNormalsBuffer(normBuf);
 		pyrSec.setIndexBuffer(indexBuf);
-		Texture tex = eng.getTextureManager().getAssetByPath("chain-fence.jpeg");
+		Texture tex = eng.getTextureManager().getAssetByPath("silver.jpg");
 		TextureState texState = (TextureState)sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
 		texState.setTexture(tex);
 		FrontFaceState faceState = (FrontFaceState) sm.getRenderSystem().createRenderState(RenderState.Type.FRONT_FACE);
 		pyr.setDataSource(DataSource.INDEX_BUFFER);
 		pyr.setRenderState(texState);
 		pyr.setRenderState(faceState);
+		
 		return pyr;
+    }
+    
+    private SceneNode createDiamond(Engine eng, SceneManager sm, int num) throws IOException {
+    	ManualObject dia = makeDiamond(eng, sm, num);
+        SceneNode diaN = sm.getRootSceneNode().createChildSceneNode("Diamond" + Integer.toString(num) + "Node");
+        diaN.scale(0.75f, 0.75f, 0.75f);
+        diaN.moveForward(randInRangeFloat(-SIZE_OF_SPACE, SIZE_OF_SPACE));
+        diaN.moveUp(randInRangeFloat(-SIZE_OF_SPACE, SIZE_OF_SPACE));
+        diaN.moveRight(randInRangeFloat(-SIZE_OF_SPACE, SIZE_OF_SPACE));
+        diaN.attachObject(dia);
+        
+        return diaN;
     }
     
     /*private void makeSkyBox(Engine engine, SceneManager sm) throws IOException {

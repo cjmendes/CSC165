@@ -10,9 +10,13 @@ public class MoveBackwardAction extends AbstractInputAction {
 	
 	public MoveBackwardAction(MyGame g) {
 		game = g;
+		
 	}
 	
 	public void performAction(float time, Event event) {
-		game.getEngine().getSceneManager().getSceneNode(game.getActiveNode().getName()).moveBackward(0.05f);
+		if(game.getSprint())
+			game.getEngine().getSceneManager().getSceneNode(game.getActiveNode().getName()).moveBackward(0.25f);
+		else
+			game.getEngine().getSceneManager().getSceneNode(game.getActiveNode().getName()).moveBackward(0.05f);
 	}
 }
