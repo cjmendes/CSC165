@@ -14,8 +14,8 @@ public class MoveLeftAction extends AbstractInputAction {
 	
 	public void performAction(float time, Event event) {
 		if(game.getSprint())
-			game.getEngine().getSceneManager().getSceneNode(game.getActiveNode().getName()).moveRight(0.25f);
+			game.getEngine().getSceneManager().getSceneNode(game.getActiveNode().getName()).moveRight(game.getSpeed() * 0.05f);
 		else
-			game.getEngine().getSceneManager().getSceneNode(game.getActiveNode().getName()).moveRight(0.05f);
+			game.getEngine().getSceneManager().getSceneNode(game.getActiveNode().getName()).moveRight(game.getSpeed());
 	}
 }

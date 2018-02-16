@@ -22,6 +22,7 @@ import ray.input.GenericInputManager;
 import ray.input.InputManager;
 import ray.input.action.Action;
 import ray.rage.*;
+import ray.rage.asset.material.Material;
 import ray.rage.asset.texture.*;
 import ray.rage.game.*;
 import ray.rage.rendersystem.*;
@@ -66,7 +67,8 @@ public class MyGame extends VariableFrameRateGame {
 	private int NUM_OF_COINS = 30;
 	private int NUM_OF_EXTRA_OBJECTS = 10;
 	private int SIZE_OF_SPACE = 20;
-
+	private float MAX_SPEED = 0.05f;
+	
     public MyGame() {
         super();
 		System.out.println("press T to render triangles");
@@ -125,6 +127,7 @@ public class MyGame extends VariableFrameRateGame {
         makeDolphin(eng, sm);
    
         //makeSkyBox(eng, sm);
+        setupAxis(eng, sm);
         
         activeNode = this.getEngine().getSceneManager().getSceneNode("MainCameraNode");
         
@@ -169,11 +172,11 @@ public class MyGame extends VariableFrameRateGame {
 		dispStr = "Time = " + elapsTimeStr + "   Keyboard hits = " + counterStr;
 		rs.setHUD(dispStr, 15, 15);
 		//System.out.println();
-		//if(checkTooFar(engine.getSceneManager()) == -1)
+		checkTooFar(engine.getSceneManager());
 			
 		// Tell the input manager to process the inputs
 		im.update(elapsTime);
-		checkCollision(engine.getSceneManager());
+		//checkCollision(engine.getSceneManager());
 	}
 
 //******************************************************************************************************************
@@ -181,7 +184,6 @@ public class MyGame extends VariableFrameRateGame {
     protected void setupInputs() {
     	im = new GenericInputManager();
     	String kbName = im.getKeyboardName();
-    	//String gpName = im.getFirstGamepadName();
     	
     	// Build some action objects for doing things in response to user input
     	quitGameAction = new QuitGameAction(this);
@@ -200,9 +202,6 @@ public class MyGame extends VariableFrameRateGame {
     	// Keyboard Action
     	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.ESCAPE, 
     			quitGameAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
-    	// Gamepad Action
-    	//im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._9, 
-    	//		quitGameAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
     	
     	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.W, 
 			    moveForwardAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
@@ -233,8 +232,43 @@ public class MyGame extends VariableFrameRateGame {
     	
     	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.LSHIFT, 
     			sprintAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
+    	
+
+    	// Gamepad Action 
+    	if(im.getFirstGamepadName() != null) {
+	    	String gpName = im.getFirstGamepadName();
+	    		
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Axis.Y, 
+					moveForwardAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+		    	
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._1, 
+		    		moveLeftAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+		    	
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._1, 
+		    		moveBackwardAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+		    	
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._1, 
+		    		moveRightAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+		    	
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._1, 
+		    		rotateCameraUp, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+		    	
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._1, 
+		    		rotateCameraDown, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+		    	
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._1, 
+		    		rotateCameraRight, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+		    	
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Axis.X, 
+		    		rotateCameraLeft, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+			
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._0, 
+		    		rideDolphinAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
+    	}
+
     }
  
+//******************************************************************************************************************
     
     public SceneNode getActiveNode() {
     	return activeNode;
@@ -259,12 +293,19 @@ public class MyGame extends VariableFrameRateGame {
     	return sprint;
     }
     
+    public float getSpeed() {
+    	return MAX_SPEED;
+    }
+    
     public boolean getTooFar() {
     	return tooFar;
     }
     
-    public int checkTooFar(SceneManager sm) {
-    	return sm.getSceneNode("MainCameraNode").getLocalPosition().compareTo(sm.getSceneNode("myDolphinNode").getLocalPosition().add(Vector3f.createFrom(1.0f, 0.0f, 0.0f)));
+    public void checkTooFar(SceneManager sm) {
+    	if( sm.getSceneNode("MainCameraNode").getLocalPosition().compareTo(
+    			sm.getSceneNode("myDolphinNode").getLocalPosition().add(Vector3f.createFrom(0.0f, 10.0f, 0.0f))) == 1){
+    		System.out.println("Too Far");
+    	}
     }
     
     public void checkCollision(SceneManager sm) {
@@ -378,6 +419,37 @@ public class MyGame extends VariableFrameRateGame {
         diaN.attachObject(dia);
         
         return diaN;
+    }
+    
+    private void setupAxis(Engine eng, SceneManager sm) throws IOException{
+    	ManualObject vertX = sm.createManualObject("VertX");
+    	ManualObjectSection vertXSec = vertX.createManualSection("VertXSection");
+    	vertX.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
+    	
+    	float[] verticesX = new float[] {
+    			-1000.0f, 0.0f, 0.0f,
+    			1000.0f, 0.0f, 0.0f
+    	};
+    	
+    	int[] indicesX = new int[] {0, 1};
+    	
+    	vertXSec.setPrimitive(Primitive.LINES);
+    	
+    	FloatBuffer vertXBuf = BufferUtil.directFloatBuffer(verticesX);
+    	IntBuffer indexXBuf = BufferUtil.directIntBuffer(indicesX);
+    	
+    	vertXSec.setVertexBuffer(vertXBuf);
+    	vertXSec.setIndexBuffer(indexXBuf);
+    	
+    	Material matX = sm.getMaterialManager().getAssetByPath("default.mtl");
+    	matX.setEmissive(Color.WHITE);
+    	Texture texX = sm.getTextureManager().getAssetByPath(matX.getTextureFilename());
+    	TextureState tstateX = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+    	tstateX.setTexture(texX);
+    	vertXSec.setRenderState(tstateX);
+    	vertXSec.setMaterial(matX);
+    	
+    	
     }
     
     /*private void makeSkyBox(Engine engine, SceneManager sm) throws IOException {
