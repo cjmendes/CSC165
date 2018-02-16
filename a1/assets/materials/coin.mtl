@@ -1,19 +1,27 @@
-newmtl DefaultMaterial
-# shininess
-Ns 75
-# ambient
+# Blender MTL File: 'coin.blend'
+# Material Count: 2
+
+newmtl coin-texture
+Ns 96.078431
 Ka 1.000000 1.000000 1.000000
-# diffuse
-Kd 1.00000 1.00000 1.00000
-# specular
-Ks 1.000000 1.000000 1.000000
-# emissive
+Kd 0.640000 0.640000 0.640000
+Ks 0.000000 0.000000 0.000000
 Ke 0.000000 0.000000 0.000000
-# refraction
 Ni 1.000000
-# fully opaque
 d 1.000000
-# illumination model
-illum 2
-# texture
+illum 1
 map_Kd coin-texture.jpg
+
+newmtl gold
+Ns 96.078431
+Ka 1.000000 1.000000 1.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 1
+map_Kd gold.jpg
+
+
+
