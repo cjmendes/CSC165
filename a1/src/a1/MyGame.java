@@ -173,8 +173,9 @@ public class MyGame extends VariableFrameRateGame {
 		elapsTimeSec = Math.round(elapsTime/1000.0f);
 		elapsTimeStr = Integer.toString(elapsTimeSec);
 		counterStr = Integer.toString(counter);
-		dispStr = "Time = " + elapsTimeStr + "   Keyboard hits = " + counterStr;
+		dispStr = "Time = " + elapsTimeStr + "   Position = " + getPosition() + "   Coins picked up = " + counterStr;
 		rs.setHUD(dispStr, 15, 15);
+		
 		//System.out.println();
 		checkTooFar(engine.getSceneManager());
 			
@@ -295,6 +296,16 @@ public class MyGame extends VariableFrameRateGame {
     	activeNode = sn;
     }
     
+    public String getPosition() {
+    	
+    	if(activeNode.getName().equals("MainCameraNode")) {
+    		
+    		return "OFF_DOLPHIN";
+    	}
+    	else
+    		return "ON_DOLPHIN";
+    }
+    
     public static float randInRangeFloat(int min, int max) {
         return min + (float) (Math.random() * ((1 + max) - min));
     }
@@ -359,10 +370,7 @@ public class MyGame extends VariableFrameRateGame {
     	Entity coinE = sm.createEntity("coin" + Integer.toString(num),	"coin.obj");
     	coinE.setPrimitive(Primitive.TRIANGLES);
     	
-    	
-    	
     	SceneNode coinN = sm.getRootSceneNode().createChildSceneNode(coinE.getName() + "Node");
-    	System.out.println(coinN.getParent());
     	coinN.moveForward(randInRangeFloat(-SIZE_OF_SPACE, SIZE_OF_SPACE));
     	coinN.moveUp(randInRangeFloat(-SIZE_OF_SPACE, SIZE_OF_SPACE));
     	coinN.moveRight(randInRangeFloat(-SIZE_OF_SPACE, SIZE_OF_SPACE));
@@ -370,7 +378,7 @@ public class MyGame extends VariableFrameRateGame {
     	coinN.rotate(Degreef.createFrom(180f), Vector3f.createUnitVectorZ());
     	coinN.attachObject(coinE);
     	coinN.scale(0.25f, 0.25f, 0.25f);
-    	System.out.println(coinE.getParentNode());
+
     	return coinN;
     }
    
