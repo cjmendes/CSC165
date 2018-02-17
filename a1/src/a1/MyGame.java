@@ -233,7 +233,7 @@ public class MyGame extends VariableFrameRateGame {
    
     protected void setupInputs() {
     	im = new GenericInputManager();
-    	String kbName = im.getKeyboardName();
+    	
     	
     	// Build some action objects for doing things in response to user input
     	quitGameAction = new QuitGameAction(this);
@@ -250,6 +250,8 @@ public class MyGame extends VariableFrameRateGame {
     	
     	// Attach the action objects to keyboard and gamepad components
     	// Keyboard Action
+    	if(im.getKeyboardName() != null) {
+    		String kbName = im.getKeyboardName();
     	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.ESCAPE, 
     			quitGameAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
     	
@@ -282,7 +284,7 @@ public class MyGame extends VariableFrameRateGame {
     	
     	im.associateAction(kbName, net.java.games.input.Component.Identifier.Key.LSHIFT, 
     			sprintAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
-    	
+    	}
 
     	// Gamepad Action 
     	if(im.getFirstGamepadName() != null) {
@@ -314,6 +316,9 @@ public class MyGame extends VariableFrameRateGame {
 			
 		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._0, 
 		    		rideDolphinAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
+		    
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._1, 
+	    			sprintAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
     	}
 
     }
