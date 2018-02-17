@@ -61,13 +61,13 @@ public class MyGame extends VariableFrameRateGame {
 	
 	private SceneNode onDolphinNode;
 	private boolean onDolphin = false;
-	private boolean sprint = false;
+	private boolean sprint = true;
 	private boolean tooFar = false;
 	
 	private int NUM_OF_COINS = 30;
 	private int NUM_OF_EXTRA_OBJECTS = 10;
 	private int SIZE_OF_SPACE = 20;
-	private float MAX_SPEED = 0.05f;
+	private float MAX_SPEED = 0.3f;
 	
     public MyGame() {
         super();
@@ -176,7 +176,15 @@ public class MyGame extends VariableFrameRateGame {
 			
 		// Tell the input manager to process the inputs
 		im.update(elapsTime);
-		//checkCollision(engine.getSceneManager());
+		for(int i = 0; i < NUM_OF_COINS; i++) {
+			if(checkCollision(engine.getSceneManager().getSceneNode("coin" + Integer.toString(i) + "Node"), engine.getSceneManager().getSceneNode("MainCameraNode")) < 0.1) {
+				counter++;
+				System.out.println(engine.getSceneManager().getSceneNode("coin" + Integer.toString(i) + "Node").getName());
+				//engine.getSceneManager().destroySceneNode("coin" + Integer.toString(i) + "Node");
+				//engine.getSceneManager().getSceneNode("coin" + Integer.toString(i) + "Node"). .detachObject("coin" + Integer.toString(i));
+			}
+		}
+		
 	}
 
 //******************************************************************************************************************
@@ -308,11 +316,15 @@ public class MyGame extends VariableFrameRateGame {
     	}
     }
     
-    public void checkCollision(SceneManager sm) {
-    	for( int i = 0; i < NUM_OF_COINS; i++ ) {
-			if( sm.getSceneNode("coin" + Integer.toString(i) + "Node").getLocalPosition() == sm.getSceneNode("MainCameraNode").getLocalPosition())
-				counter++;
-		}
+    public float checkCollision(SceneNode a, SceneNode b) {
+    	float ax = a.getLocalPosition().x();
+    	float ay = a.getLocalPosition().y();
+    	float az = a.getLocalPosition().z();
+    	float bx = b.getLocalPosition().x();
+    	float by = b.getLocalPosition().y();
+    	float bz = b.getLocalPosition().z();
+    	
+    	return (float)Math.sqrt((double)(ax - bx) * (ax - bx) + (ay-by) * (ay - by) + (az - bz) * (az - bz));
     }
     
 //******************************************************************************************************************
@@ -449,7 +461,8 @@ public class MyGame extends VariableFrameRateGame {
     	vertXSec.setRenderState(tstateX);
     	vertXSec.setMaterial(matX);
     	
-    	
+    	SceneNode vertXN = sm.getRootSceneNode().createChildSceneNode("VertXNode");
+    	vertXN.attachObject(vertX);
     }
     
     /*private void makeSkyBox(Engine engine, SceneManager sm) throws IOException {
