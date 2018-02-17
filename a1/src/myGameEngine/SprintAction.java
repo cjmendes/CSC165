@@ -14,6 +14,9 @@ public class SprintAction extends AbstractInputAction {
 	}
 	
 	public void performAction(float time, Event event) {
-		game.changeSprint();
+		if(game.getBoost() > 0) {
+			game.changeSprint();
+			game.consumeBoost();
+		}
 	}
 }

@@ -47,10 +47,11 @@ public class MyGame extends VariableFrameRateGame {
 	String elapsTimeStr, counterStr, dispStr;
 	int elapsTimeSec, counter = 0;
 	
+	// Variable for changing different game values
 	private int NUM_OF_COINS = 30;
 	private int NUM_OF_EXTRA_OBJECTS = 10;
 	private int SIZE_OF_SPACE = 20;
-	private float MAX_SPEED = 0.3f;
+	private float MAX_SPEED = 0.5f;
 	
 	//Entity dolphinE;
 	private SceneNode activeNode;
@@ -68,17 +69,28 @@ public class MyGame extends VariableFrameRateGame {
 	private SceneNode onDolphinNode;
 	private boolean onDolphin = false;
 	private boolean sprint = true;
-	private boolean tooFar = false;
 	
+	// Variable for collision with coins
 	private int[] coinList = new int[NUM_OF_COINS];
 	private int position = 0;
 	
+	//Variable for the sprint function
+	private int[] speedBar = new int[] {1,0,0,0,0};
+	private int positionBoost = 1;
+	private int speedTimer = 0;
+	
     public MyGame() {
         super();
-		System.out.println("press T to render triangles");
-		System.out.println("press L to render lines");
-		System.out.println("press P to render points");
-		System.out.println("press C to increment counter");
+		System.out.println("press W to move forward");
+		System.out.println("press S to move backward");
+		System.out.println("press A to move right");
+		System.out.println("press D to move left");
+		System.out.println("press UP ARROW to turn camera upwards");
+		System.out.println("press DOWN ARROW to turn camera downwards");
+		System.out.println("press RIGHT ARROW to turn camera right");
+		System.out.println("press LEFT ARROW to turn camera left");
+		System.out.println("press SPACE to switch ON and OFF the dolphin");
+		System.out.println("press SHIFT for temporary boost when a coin is collected");
     }
 
     public static void main(String[] args) {
@@ -121,6 +133,8 @@ public class MyGame extends VariableFrameRateGame {
     }
 
 //******************************************************************************************************************
+//************************ Game Engine SETUP Function **************************************************************
+//******************************************************************************************************************
    
     @Override
     protected void setupScene(Engine eng, SceneManager sm) throws IOException {
@@ -130,39 +144,41 @@ public class MyGame extends VariableFrameRateGame {
         // Create Dolphin
         makeDolphin(eng, sm);
    
-        //makeSkyBox(eng, sm);
+        // Create the Axis
         setupAxis(eng, sm);
         
         activeNode = this.getEngine().getSceneManager().getSceneNode("MainCameraNode");
         
-       RotationController rc = new RotationController(Vector3f.createUnitVectorY(), 0.01f);
+        // Set Rotation for the Diamonds
+        RotationController rc = new RotationController(Vector3f.createUnitVectorY(), 0.01f);
+        for( int i = 0; i < NUM_OF_EXTRA_OBJECTS; i++)
+    	    rc.addNode(createDiamond(eng, sm, i));
        
-       for( int i = 0; i < NUM_OF_EXTRA_OBJECTS; i++)
-    	   rc.addNode(createDiamond(eng, sm, i));
+        sm.addController(rc);
        
-       sm.addController(rc);
+        // Set Rotation for the Coins
+        RotationController rcCoin = new RotationController(Vector3f.createUnitVectorZ(), 0.4f);
+        for( int i = 0; i < NUM_OF_COINS; i++)
+    	    rcCoin.addNode(makeCoin(eng, sm, i));
        
-       RotationController rcCoin = new RotationController(Vector3f.createUnitVectorZ(), 0.4f);
-              
-       for( int i = 0; i < NUM_OF_COINS; i++)
-    	   rcCoin.addNode(makeCoin(eng, sm, i));
-       
-       sm.addController(rcCoin);
+        sm.addController(rcCoin);
 
-       sm.getAmbientLight().setIntensity(new Color(.1f, .1f, .1f));
+        sm.getAmbientLight().setIntensity(new Color(.1f, .1f, .1f));
 		
-       //***** Light Node *****
-       Light plight = sm.createLight("testLamp1", Light.Type.POINT);
-       plight.setAmbient(new Color(.3f, .3f, .3f));
-       plight.setDiffuse(new Color(.7f, .7f, .7f));
-       plight.setSpecular(new Color(1.0f, 1.0f, 1.0f));
-       plight.setRange(5f);
+        //***** Light Node *****
+        Light plight = sm.createLight("testLamp1", Light.Type.POINT);
+        plight.setAmbient(new Color(.3f, .3f, .3f));
+        plight.setDiffuse(new Color(.7f, .7f, .7f));
+        plight.setSpecular(new Color(1.0f, 1.0f, 1.0f));
+        plight.setRange(5f);
 		
-       SceneNode plightNode = sm.getRootSceneNode().createChildSceneNode("plightNode");
-       plightNode.attachObject(plight);
+        SceneNode plightNode = sm.getRootSceneNode().createChildSceneNode("plightNode");
+        plightNode.attachObject(plight);
 
     }
 
+//******************************************************************************************************************
+//************************ Game Engine UPDATE Function *************************************************************
 //******************************************************************************************************************
     
     @Override
@@ -173,14 +189,19 @@ public class MyGame extends VariableFrameRateGame {
 		elapsTimeSec = Math.round(elapsTime/1000.0f);
 		elapsTimeStr = Integer.toString(elapsTimeSec);
 		counterStr = Integer.toString(counter);
-		dispStr = "Time = " + elapsTimeStr + "   Position = " + getPosition() + "   Coins picked up = " + counterStr;
+		dispStr = "Time = " + elapsTimeStr + "   Position = " + getPosition() + "   Coins Picked Up = " + counterStr 
+				+ "   Speed Boost = " + printPowerUp(speedBar);
 		rs.setHUD(dispStr, 15, 15);
-		
-		//System.out.println();
-		checkTooFar(engine.getSceneManager());
 			
 		// Tell the input manager to process the inputs
 		im.update(elapsTime);
+		
+		// Check distance from Dolphin. If too far, teleport back to dolphin.
+		if(getActiveNode().getName().equals("MainCameraNode")) {
+			if(checkCollision(engine.getSceneManager().getSceneNode("myDolphinNode"), engine.getSceneManager().getSceneNode("MainCameraNode")) > 4) {
+				engine.getSceneManager().getSceneNode("MainCameraNode").setLocalPosition(engine.getSceneManager().getSceneNode("myDolphinNode").getLocalPosition().add(Vector3f.createFrom(-0.3f, 0.2f, 0.0f)));
+			}
+		}
 		
 		// Check collision of camera and coins
 		for(int i = 0; i < NUM_OF_COINS; i++) {
@@ -189,14 +210,25 @@ public class MyGame extends VariableFrameRateGame {
 				if(!IntStream.of(coinList).anyMatch(x -> x == temp)) {
 					engine.getSceneManager().getSceneNode("coin" + Integer.toString(i) + "Node").detachAllObjects();
 					coinList[position] = i;
+					addBoost();
 					counter++;
 					position++;
 				}
 			}
 		}
 		
+		// Sets sprint boost for 3 seconds and then turns off
+		if(sprint == false && speedTimer == 0)
+			speedTimer = elapsTimeSec;
+		else if(sprint == false && (elapsTimeSec - speedTimer) >= 3) {
+			sprint = true;
+			speedTimer = 0;
+		}
+		
 	}
 
+//******************************************************************************************************************
+//************************ Setup the Keyboard and Gamepad Inputs ***************************************************
 //******************************************************************************************************************
    
     protected void setupInputs() {
@@ -256,28 +288,28 @@ public class MyGame extends VariableFrameRateGame {
     	if(im.getFirstGamepadName() != null) {
 	    	String gpName = im.getFirstGamepadName();
 	    		
-		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Axis.Y, 
-					moveForwardAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
-		    	
-		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._1, 
-		    		moveLeftAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
-		    	
-		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._1, 
-		    		moveBackwardAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
-		    	
-		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._1, 
-		    		moveRightAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
-		    	
-		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._1, 
-		    		rotateCameraUp, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
-		    	
-		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._1, 
-		    		rotateCameraDown, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
-		    	
-		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._1, 
-		    		rotateCameraRight, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Axis.X, 
+					moveForwardAction, InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY);
 		    	
 		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Axis.X, 
+		    		moveLeftAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+		    	
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Axis.Y, 
+		    		moveBackwardAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+		    	
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Axis.Y, 
+		    		moveRightAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+		    	
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Axis.RY, 
+		    		rotateCameraUp, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+		    	
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Axis.RY, 
+		    		rotateCameraDown, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+		    	
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Axis.RX, 
+		    		rotateCameraRight, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+		    	
+		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Axis.RX, 
 		    		rotateCameraLeft, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
 			
 		    im.associateAction(gpName, net.java.games.input.Component.Identifier.Button._0, 
@@ -287,17 +319,21 @@ public class MyGame extends VariableFrameRateGame {
     }
  
 //******************************************************************************************************************
+//************************ Custom Functions ************************************************************************
+//******************************************************************************************************************
     
+    // Get Active Node (MainCameraNode or myDolphinNode)
     public SceneNode getActiveNode() {
     	return activeNode;
     }
     
+    // Set Active Node (MainCameraNode or myDolphinNode)
     public void setActiveNode(SceneNode sn) {
     	activeNode = sn;
     }
     
+    // Set HUD Display of current status (ON or OFF Dolphin)
     public String getPosition() {
-    	
     	if(activeNode.getName().equals("MainCameraNode")) {
     		
     		return "OFF_DOLPHIN";
@@ -306,10 +342,12 @@ public class MyGame extends VariableFrameRateGame {
     		return "ON_DOLPHIN";
     }
     
+    // Create a random float variable
     public static float randInRangeFloat(int min, int max) {
         return min + (float) (Math.random() * ((1 + max) - min));
     }
     
+    // Change whether sprint is on or off
     public void changeSprint() {
     	if(sprint)
     		sprint = false;
@@ -317,25 +355,17 @@ public class MyGame extends VariableFrameRateGame {
     		sprint = true;
     }
     
+    // Get sprint status
     public boolean getSprint() {
     	return sprint;
     }
     
+    // Get the current speed
     public float getSpeed() {
     	return MAX_SPEED;
     }
     
-    public boolean getTooFar() {
-    	return tooFar;
-    }
-    
-    public void checkTooFar(SceneManager sm) {
-    	if( sm.getSceneNode("MainCameraNode").getLocalPosition().compareTo(
-    			sm.getSceneNode("myDolphinNode").getLocalPosition().add(Vector3f.createFrom(0.0f, 10.0f, 0.0f))) == 1){
-    		System.out.println("Too Far");
-    	}
-    }
-    
+    // Collision Detection Algorithm
     public float checkCollision(SceneNode a, SceneNode b) {
     	float ax = a.getLocalPosition().x();
     	float ay = a.getLocalPosition().y();
@@ -345,6 +375,39 @@ public class MyGame extends VariableFrameRateGame {
     	float bz = b.getLocalPosition().z();
     	
     	return (float)Math.sqrt((double)(ax - bx) * (ax - bx) + (ay-by) * (ay - by) + (az - bz) * (az - bz));
+    }
+    
+    // Get Boost status
+    public int getBoost() {
+    	return positionBoost;
+    }
+    
+    // Add Boost to SprintBar
+    private void addBoost() {
+    	if(positionBoost < 5) {
+    		speedBar[positionBoost] = 1;
+    		positionBoost++;
+    	}
+    }
+    
+    // Remove Boost from SprintBar
+    public void consumeBoost() {
+    	if(positionBoost > 0) {
+    		speedBar[positionBoost - 1] = 0;
+    		positionBoost--;
+    	}
+    }
+    
+    // Print out SpeedBar for HUD
+    private String printPowerUp(int[] num) {
+    	String s = "|";
+    	for(int i = 0; i < num.length; i++) {
+    		if(num[i] == 1)
+    			s += "=";
+    		else
+    			s += "  ";
+    	}
+    	return s + "|";
     }
     
 //******************************************************************************************************************
@@ -429,13 +492,14 @@ public class MyGame extends VariableFrameRateGame {
 		pyrSec.setTextureCoordsBuffer(texBuf);
 		pyrSec.setNormalsBuffer(normBuf);
 		pyrSec.setIndexBuffer(indexBuf);
-		Texture tex = eng.getTextureManager().getAssetByPath("silver.jpg");
-		TextureState texState = (TextureState)sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
-		texState.setTexture(tex);
-		FrontFaceState faceState = (FrontFaceState) sm.getRenderSystem().createRenderState(RenderState.Type.FRONT_FACE);
-		pyr.setDataSource(DataSource.INDEX_BUFFER);
+		
+		Material matX = sm.getMaterialManager().getAssetByPath("silver.mtl");
+	    Texture tex = sm.getTextureManager().getAssetByPath(matX.getTextureFilename());
+	    TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+	    texState.setTexture(tex);
+	    pyr.setDataSource(DataSource.INDEX_BUFFER);
 		pyr.setRenderState(texState);
-		pyr.setRenderState(faceState);
+	    pyr.setMaterial(matX);
 		
 		return pyr;
     }
@@ -452,70 +516,86 @@ public class MyGame extends VariableFrameRateGame {
         return diaN;
     }
     
-    private void setupAxis(Engine eng, SceneManager sm) throws IOException{
-    	ManualObject vertX = sm.createManualObject("VertX");
-    	ManualObjectSection vertXSec = vertX.createManualSection("VertXSection");
-    	vertX.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
-    	
-    	float[] verticesX = new float[] {
+    //***** Make Axis *****
+    private void setupAxis(Engine eng, SceneManager sm) throws IOException {
+		ManualObject vertexX = sm.createManualObject("VecX");
+		ManualObjectSection vertexSecX = vertexX.createManualSection("VertexSectionX");
+		vertexX.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
+		
+		ManualObject vertexY = sm.createManualObject("VecY");
+		ManualObjectSection vertexSecY = vertexX.createManualSection("VertexSectionY");
+		vertexX.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
+		
+		ManualObject vecZ = sm.createManualObject("VecZ");
+		ManualObjectSection vertexSecZ = vertexX.createManualSection("VertexSectionZ");
+		vertexX.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
+        
+        float[] verticesX = new float[] { 
     			-1000.0f, 0.0f, 0.0f,
-    			1000.0f, 0.0f, 0.0f
-    	};
-    	
-    	int[] indicesX = new int[] {0, 1};
-    	
-    	vertXSec.setPrimitive(Primitive.LINES);
-    	
-    	FloatBuffer vertXBuf = BufferUtil.directFloatBuffer(verticesX);
-    	IntBuffer indexXBuf = BufferUtil.directIntBuffer(indicesX);
-    	
-    	vertXSec.setVertexBuffer(vertXBuf);
-    	vertXSec.setIndexBuffer(indexXBuf);
-    	
-    	Material matX = sm.getMaterialManager().getAssetByPath("default.mtl");
-    	matX.setEmissive(Color.WHITE);
-    	Texture texX = sm.getTextureManager().getAssetByPath(matX.getTextureFilename());
-    	TextureState tstateX = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
-    	tstateX.setTexture(texX);
-    	vertXSec.setRenderState(tstateX);
-    	vertXSec.setMaterial(matX);
-    	
-    	SceneNode vertXN = sm.getRootSceneNode().createChildSceneNode("VertXNode");
-    	vertXN.attachObject(vertX);
+    			1000.0f, 0.0f, 0.0f, 
+		};
+        float[] verticesY = new float[] { 
+        		0.0f, -1000.0f, 0.0f,
+        		0.0f, 1000.0f, 0.0f,
+		};
+        float[] verticesZ = new float[] { 
+        		0.0f, 0.0f, -1000.0f,
+        		0.0f, 0.0f, 1000.0f,
+		};     
+		
+		int[] indicesX = new int[] { 0,1 };
+		int[] indicesY = new int[] { 0,1 };
+		int[] indicesZ = new int[] { 0,1 };
+		
+		vertexSecX.setPrimitive(Primitive.LINES);
+		vertexSecY.setPrimitive(Primitive.LINES);
+		vertexSecZ.setPrimitive(Primitive.LINES);
+		
+		FloatBuffer vertBufX = BufferUtil.directFloatBuffer(verticesX);
+		IntBuffer indexBufX = BufferUtil.directIntBuffer(indicesX);
+		FloatBuffer vertBufY = BufferUtil.directFloatBuffer(verticesY);
+		IntBuffer indexBufY = BufferUtil.directIntBuffer(indicesY);
+		FloatBuffer vertBufZ = BufferUtil.directFloatBuffer(verticesZ);
+		IntBuffer indexBufZ = BufferUtil.directIntBuffer(indicesZ);
+		
+		vertexSecX.setVertexBuffer(vertBufX);
+		vertexSecX.setIndexBuffer(indexBufX);
+		vertexSecY.setVertexBuffer(vertBufY);
+		vertexSecY.setIndexBuffer(indexBufY);
+		vertexSecZ.setVertexBuffer(vertBufZ);
+		vertexSecZ.setIndexBuffer(indexBufZ);
+		
+		Material matX = sm.getMaterialManager().getAssetByPath("defaultX.mtl");
+	    matX.setEmissive(Color.BLUE);
+	    Texture texX = sm.getTextureManager().getAssetByPath(matX.getTextureFilename());
+	    TextureState tstateX = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+	    tstateX.setTexture(texX);
+	    vertexSecX.setRenderState(tstateX);
+	    vertexSecX.setMaterial(matX);
+	    
+	    SceneNode vertexXNode = sm.getRootSceneNode().createChildSceneNode("XNode");
+	    vertexXNode.attachObject(vertexX);
+	    
+	    Material matY = sm.getMaterialManager().getAssetByPath("defaultY.mtl");
+	    matY.setEmissive(Color.RED);
+	    Texture texY = sm.getTextureManager().getAssetByPath(matY.getTextureFilename());
+	    TextureState tstateY = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+	    tstateY.setTexture(texY);
+	    vertexSecY.setRenderState(tstateY);
+	    vertexSecY.setMaterial(matY);
+	    
+	    SceneNode vertexYNode = sm.getRootSceneNode().createChildSceneNode("YNode");
+	    vertexYNode.attachObject(vertexY);
+	    
+	    Material matZ = sm.getMaterialManager().getAssetByPath("defaultZ.mtl");
+	    matZ.setEmissive(Color.YELLOW);
+	    Texture texZ = sm.getTextureManager().getAssetByPath(matZ.getTextureFilename());
+	    TextureState tstateZ = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+	    tstateZ.setTexture(texZ);
+	    vertexSecZ.setRenderState(tstateZ);
+	    vertexSecZ.setMaterial(matZ);
+	    
+	    SceneNode vertexZNode = sm.getRootSceneNode().createChildSceneNode("ZNode");
+	    vertexZNode.attachObject(vecZ);
     }
-    
-    /*private void makeSkyBox(Engine engine, SceneManager sm) throws IOException {
-        Configuration conf = engine.getConfiguration();
-        TextureManager textureMgr = engine.getTextureManager();
-
-        textureMgr.setBaseDirectoryPath(conf.valueOf("assets.skyboxes.path")); 
-        Texture front = textureMgr.getAssetByPath("cyclone-island_ft.png");
-        Texture back = textureMgr.getAssetByPath("cyclone-island_bk.png");
-        Texture left = textureMgr.getAssetByPath("cyclone-island_rt.png");
-        Texture right = textureMgr.getAssetByPath("cyclone-island_lf.png");
-        Texture top = textureMgr.getAssetByPath("cyclone-island_up.png");
-        Texture bottom = textureMgr.getAssetByPath("cyclone-island_dn.png");
-        textureMgr.setBaseDirectoryPath(conf.valueOf("assets.textures.path"));
-
-        // cubemap textures must be flipped up-side-down to face inward; all textures must have the same dimensions, so any image height will do
-        AffineTransform xform = new AffineTransform();
-        xform.translate(0, front.getImage().getHeight());
-        xform.scale(1d, -1d);
-
-        front.transform(xform);
-        back.transform(xform);
-        left.transform(xform);
-        right.transform(xform);
-        top.transform(xform);
-        bottom.transform(xform);
-
-        SkyBox sb = sm.createSkyBox("SkyBox");
-        sb.setTexture(front, SkyBox.Face.FRONT);
-        sb.setTexture(back, SkyBox.Face.BACK);
-        sb.setTexture(left, SkyBox.Face.LEFT);
-        sb.setTexture(right, SkyBox.Face.RIGHT);
-        sb.setTexture(top, SkyBox.Face.TOP);
-        sb.setTexture(bottom, SkyBox.Face.BOTTOM);
-        sm.setActiveSkyBox(sb);
-    }*/
 }
