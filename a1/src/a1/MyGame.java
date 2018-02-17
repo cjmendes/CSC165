@@ -6,6 +6,7 @@ import java.awt.geom.AffineTransform;
 import java.io.*;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
+import java.util.stream.IntStream;
 
 import myGameEngine.MoveBackwardAction;
 import myGameEngine.MoveForwardAction;
@@ -46,6 +47,11 @@ public class MyGame extends VariableFrameRateGame {
 	String elapsTimeStr, counterStr, dispStr;
 	int elapsTimeSec, counter = 0;
 	
+	private int NUM_OF_COINS = 30;
+	private int NUM_OF_EXTRA_OBJECTS = 10;
+	private int SIZE_OF_SPACE = 20;
+	private float MAX_SPEED = 0.3f;
+	
 	//Entity dolphinE;
 	private SceneNode activeNode;
 	
@@ -64,10 +70,8 @@ public class MyGame extends VariableFrameRateGame {
 	private boolean sprint = true;
 	private boolean tooFar = false;
 	
-	private int NUM_OF_COINS = 30;
-	private int NUM_OF_EXTRA_OBJECTS = 10;
-	private int SIZE_OF_SPACE = 20;
-	private float MAX_SPEED = 0.3f;
+	private int[] coinList = new int[NUM_OF_COINS];
+	private int position = 0;
 	
     public MyGame() {
         super();
@@ -176,12 +180,17 @@ public class MyGame extends VariableFrameRateGame {
 			
 		// Tell the input manager to process the inputs
 		im.update(elapsTime);
+		
+		// Check collision of camera and coins
 		for(int i = 0; i < NUM_OF_COINS; i++) {
 			if(checkCollision(engine.getSceneManager().getSceneNode("coin" + Integer.toString(i) + "Node"), engine.getSceneManager().getSceneNode("MainCameraNode")) < 0.1) {
-				counter++;
-				System.out.println(engine.getSceneManager().getSceneNode("coin" + Integer.toString(i) + "Node").getName());
-				//engine.getSceneManager().destroySceneNode("coin" + Integer.toString(i) + "Node");
-				//engine.getSceneManager().getSceneNode("coin" + Integer.toString(i) + "Node"). .detachObject("coin" + Integer.toString(i));
+				int temp = i;
+				if(!IntStream.of(coinList).anyMatch(x -> x == temp)) {
+					engine.getSceneManager().getSceneNode("coin" + Integer.toString(i) + "Node").detachAllObjects();
+					coinList[position] = i;
+					counter++;
+					position++;
+				}
 			}
 		}
 		
@@ -351,7 +360,9 @@ public class MyGame extends VariableFrameRateGame {
     	coinE.setPrimitive(Primitive.TRIANGLES);
     	
     	
+    	
     	SceneNode coinN = sm.getRootSceneNode().createChildSceneNode(coinE.getName() + "Node");
+    	System.out.println(coinN.getParent());
     	coinN.moveForward(randInRangeFloat(-SIZE_OF_SPACE, SIZE_OF_SPACE));
     	coinN.moveUp(randInRangeFloat(-SIZE_OF_SPACE, SIZE_OF_SPACE));
     	coinN.moveRight(randInRangeFloat(-SIZE_OF_SPACE, SIZE_OF_SPACE));
@@ -359,7 +370,7 @@ public class MyGame extends VariableFrameRateGame {
     	coinN.rotate(Degreef.createFrom(180f), Vector3f.createUnitVectorZ());
     	coinN.attachObject(coinE);
     	coinN.scale(0.25f, 0.25f, 0.25f);
-    	
+    	System.out.println(coinE.getParentNode());
     	return coinN;
     }
    
